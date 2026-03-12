@@ -1410,10 +1410,93 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIK
     window.resetRefer = function() { $('#referStart,#referEnd').val(''); $('#referDept').val('All'); updateRefer(); }
     window.resetDisease = function() { $('#diseaseStart,#diseaseEnd').val(''); $('#diseaseOpdDept,#diseaseIpdDept,#diseaseIpdWard').val('All'); updateDisease(); }
     window.resetIncomeRight = function() { $('#incRightStart, #incRightEnd').val(''); updateIncomeRight(); }
+
+// ==========================================
+    // ฟังก์ชันที่ขาดหายไป: สร้างตารางหน้า Refer
+    // ==========================================
+    function renderReferTable(tableId, tbodyId, data, idxPdx) {
+        // ล้างตารางเก่าทิ้งก่อน (ถ้ามี)
+        if ($.fn.DataTable.isDataTable('#' + tableId)) $('#' + tableId).DataTable().destroy();
+        
+        let html = data.map(r => {
+            // จัดรูปแบบวันที่
+            let dObj = parseDate(r[0]);
+            let dStr = r[0];
+            if (dObj && !isNaN(dObj.getTime())) {
+                dStr = String(dObj.getDate()).padStart(2, '0') + '/' + 
+                       String(dObj.getMonth() + 1).padStart(2, '0') + '/' + 
+                       dObj.getFullYear();
+            }
+            
+            // ดึงข้อมูลแต่ละคอลัมน์
+            let time = String(r[1] || '-');
+            let type = String(r[2] || '-');
+            let location = String(r[3] || '-');
+            let pdx = String(r[idxPdx] || '-');
+            
+            return `<tr>
+                        <td>${dStr}</td>
+                        <td>${time}</td>
+                        <td>${type}</td>
+                        <td>${location}</td>
+                        <td>${pdx}</td>
+                    </tr>`;
+        }).join('');
+        
+        document.getElementById(tbodyId).innerHTML = html;
+        
+        // เรียกใช้ DataTables เพื่อให้มีช่องค้นหาและปุ่ม Excel
+        $('#' + tableId).DataTable({
+            pageLength: 10,
+            order: [[0, 'desc']], // เรียงวันที่ล่าสุดขึ้นก่อน
+            dom: 'Bfrtip',
+            buttons: ['excelHtml5']
+        });
+    }
+
+    // ==========================================
+    // ฟังก์ชันที่ขาดหายไป: สร้างตารางหน้า อันดับโรค (Disease)
+    // ==========================================
+    function renderDataTableDisease(tableId, tbodyId, tableData, isIpd) {
+        // ล้างตารางเก่าทิ้งก่อน (ถ้ามี)
+        if ($.fn.DataTable.isDataTable('#' + tableId)) $('#' + tableId).DataTable().destroy();
+        
+        let html = tableData.map(r => {
+            if (isIpd) {
+                // IPD มี 5 คอลัมน์: [อันดับ, PDX, แผนก, Ward, จำนวน]
+                return `<tr>
+                            <td class="text-center">${r[0]}</td>
+                            <td class="fw-bold text-danger">${r[1]}</td>
+                            <td>${r[2]}</td>
+                            <td>${r[3]}</td>
+                            <td class="text-end fw-bold">${r[4]}</td>
+                        </tr>`;
+            } else {
+                // OPD มี 4 คอลัมน์: [อันดับ, PDX, แผนก, จำนวน]
+                return `<tr>
+                            <td class="text-center">${r[0]}</td>
+                            <td class="fw-bold text-success">${r[1]}</td>
+                            <td>${r[2]}</td>
+                            <td class="text-end fw-bold">${r[3]}</td>
+                        </tr>`;
+            }
+        }).join('');
+        
+        document.getElementById(tbodyId).innerHTML = html;
+        
+        // เรียกใช้ DataTables
+        $('#' + tableId).DataTable({
+            pageLength: 10,
+            order: [[0, 'asc']], // เรียงตามอันดับ 1, 2, 3...
+            dom: 'Bfrtip',
+            buttons: ['excelHtml5']
+        });
+    }
 </script>
 
 </body>
 </html>
+
 
 
 
