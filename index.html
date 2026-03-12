@@ -732,24 +732,46 @@
     let opdF = [], ipdF = [];
 
     // นำลิงก์ที่ได้จากขั้นตอนที่ 1 มาใส่ในเครื่องหมายคำพูดด้านล่างนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbxl730LSqYK88BZok5bOEjW5Zf5EWLs74slNHMdmyZjJfOBBrScjEkkB56k3McJc7tzvQ/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIKBYDoVIeuDu2ZAtuqxk1TkIUvsFZGFimgCAG-aL-FW1k15A/exec"; 
 
-function init() { 
-  // แสดงสถานะระหว่างรอข้อมูลโหลด
-  $('#homeLastUpdate').text("กำลังโหลดข้อมูลจากฐานข้อมูล..."); 
-  
-  // ใช้คำสั่ง fetch แทน google.script.run เพื่อดึงข้อมูลข้ามเซิร์ฟเวอร์
-  fetch(API_URL)
-    .then(response => response.json())
-    .then(d => { 
-        DB = d; // เก็บข้อมูลลงตัวแปรเดิมของคุณ
-        onLoaded(); // เรียกฟังก์ชันแสดงผลของคุณ
-    })
-    .catch(error => {
-        console.error("Error Fetching Data:", error);
-        $('#homeLastUpdate').text("❌ เกิดข้อผิดพลาดในการโหลดข้อมูล");
-    });
-}
+    // เปลี่ยนฟังก์ชัน init ใหม่ เพื่อโหลดข้อมูลทีละชีต
+    async function init() { 
+        $('#homeLastUpdate').text("กำลังโหลดข้อมูล... (0/7)"); 
+        
+        try {
+            // สร้าง Promise เพื่อดึงข้อมูลพร้อมกัน แต่แยกทีละ request เพื่อลดขนาดไฟล์
+            const requests = [
+                fetch(API_URL + "?sheet=OPD1").then(r => r.json()),
+                fetch(API_URL + "?sheet=OPD2").then(r => r.json()),
+                fetch(API_URL + "?sheet=DATAIP").then(r => r.json()),
+                fetch(API_URL + "?sheet=TOPOP").then(r => r.json()),
+                fetch(API_URL + "?sheet=TOPIP").then(r => r.json()),
+                fetch(API_URL + "?sheet=referOP").then(r => r.json()),
+                fetch(API_URL + "?sheet=referIP").then(r => r.json())
+            ];
+
+            // รอจนกว่าจะดึงครบทุกชีต
+            const results = await Promise.all(requests);
+
+            // ประกอบร่างข้อมูลกลับเข้าไปในตัวแปร DB
+            DB = {
+                opd1: results[0],
+                opd2: results[1],
+                dataIp: results[2],
+                topOp: results[3],
+                topIp: results[4],
+                referOp: results[5],
+                referIp: results[6]
+            };
+
+            $('#homeLastUpdate').text("ประมวลผลข้อมูลเสร็จสิ้น");
+            onLoaded(); // เรียกฟังก์ชันแสดงผลของคุณ
+
+        } catch (error) {
+            console.error("Error Fetching Data:", error);
+            $('#homeLastUpdate').text("❌ เกิดข้อผิดพลาดในการโหลดข้อมูล อาจเพราะข้อมูลใหญ่เกินไป");
+        }
+    }
 
     function onLoaded() {
       try {
@@ -1392,6 +1414,7 @@ function init() {
 
 </body>
 </html>
+
 
 
 
