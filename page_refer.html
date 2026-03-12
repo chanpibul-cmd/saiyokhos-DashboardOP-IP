@@ -1,0 +1,126 @@
+<div id="page-refer" class="page-section">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-purple fw-bold">🚑 Refer Dashboard</h3>
+    <div class="text-muted small" id="lastUpdatedRefer">...</div>
+  </div>
+
+  <ul class="nav nav-pills mb-3" id="referTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-refer-opd" data-bs-toggle="pill" data-bs-target="#content-refer-opd" type="button" onclick="setTimeout(updateRefer,200)">OPD Refer</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-refer-ipd" data-bs-toggle="pill" data-bs-target="#content-refer-ipd" type="button" onclick="setTimeout(updateRefer,200)">IPD Refer</button>
+    </li>
+  </ul>
+
+  <div class="filter-section mb-4">
+    <div class="row g-2">
+      <div class="col-6 col-md-2">
+        <label class="small fw-bold">📅 เริ่มต้น</label>
+        <input type="date" id="referStart" class="form-control form-control-sm" onchange="updateRefer()">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="small fw-bold">📅 สิ้นสุด</label>
+        <input type="date" id="referEnd" class="form-control form-control-sm" onchange="updateRefer()">
+      </div>
+      
+      <div class="col-6 col-md-3 filter-refer-opd">
+        <label class="small fw-bold">🏥 จุดส่ง (OPD)</label>
+        <select id="referDept" class="form-select form-select-sm" onchange="updateRefer()">
+          <option value="All">ทั้งหมด</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-3 filter-refer-ipd d-none">
+        <label class="small fw-bold">🛌 Ward</label>
+        <select id="referWard" class="form-select form-select-sm" onchange="updateRefer()">
+          <option value="All">ทั้งหมด</option>
+        </select>
+      </div>
+       <div class="col-6 col-md-2 filter-refer-ipd d-none">
+        <label class="small fw-bold">🏥 แผนก</label>
+        <select id="referIpdDept" class="form-select form-select-sm" onchange="updateRefer()">
+          <option value="All">ทั้งหมด</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex align-items-end ms-auto">
+        <button class="btn btn-secondary btn-sm w-100" onclick="resetRefer()">
+          <i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="content-refer-opd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-4 text-center border-primary border-start border-4">
+            <h5 class="text-muted">จำนวน Refer (OPD) ทั้งหมด</h5>
+            <div class="display-4 fw-bold text-primary" id="kpi-refer-opd-count">0</div>
+            <small class="text-muted">เคส</small>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 h-100">
+             <div class="d-flex justify-content-between align-items-center mb-2">
+               <h6 class="text-secondary fw-bold">🕒 แยกตามช่วงเวลา (เวรเช้า/บ่าย/ดึก)</h6>
+               <div class="text-muted small fw-bold bg-light px-2 py-1 rounded" id="refer-opd-shift-avg">รอคำนวณ...</div>
+             </div>
+             <div id="chart_refer_opd_shift" class="chart-container" style="height: 300px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📈 รายวัน</h6><div id="chart_refer_opd_daily" class="chart-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📅 รายเดือน</h6><div id="chart_refer_opd_monthly" class="chart-container"></div></div></div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🏥 แยกตามจุดส่ง</h6><div id="chart_refer_opd_dept" class="chart-container"></div><div id="table_refer_opd_dept" class="summary-table-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🦠 PDX ที่ส่งต่อ</h6><div id="chart_refer_opd_pdx" class="chart-container"></div><div id="table_refer_opd_pdx" class="summary-table-container"></div></div></div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด Refer OPD</h6>
+        <div class="table-responsive"><table id="tableReferOPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>วันที่</th><th>เวลา</th><th>ประเภท</th><th>จุดส่ง</th><th>PDX</th></tr></thead><tbody id="tbodyReferOPD"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="content-refer-ipd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-4 text-center border-danger border-start border-4">
+            <h5 class="text-muted">จำนวน Refer (IPD) ทั้งหมด</h5>
+            <div class="display-4 fw-bold text-danger" id="kpi-refer-ipd-count">0</div>
+            <small class="text-muted">เฉพาะเคส By Transfer</small>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 h-100">
+             <div class="d-flex justify-content-between align-items-center mb-2">
+               <h6 class="text-secondary fw-bold">🕒 แยกตามช่วงเวลา (เวรเช้า/บ่าย/ดึก)</h6>
+               <div class="text-muted small fw-bold bg-light px-2 py-1 rounded" id="refer-ipd-shift-avg">รอคำนวณ...</div>
+             </div>
+             <div id="chart_refer_ipd_shift" class="chart-container" style="height: 300px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📈 รายวัน</h6><div id="chart_refer_ipd_daily" class="chart-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📅 รายเดือน</h6><div id="chart_refer_ipd_monthly" class="chart-container"></div></div></div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🛌 แยกตาม Ward</h6><div id="chart_refer_ipd_ward" class="chart-container"></div><div id="table_refer_ipd_ward" class="summary-table-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🦠 PDX ที่ส่งต่อ</h6><div id="chart_refer_ipd_pdx" class="chart-container"></div><div id="table_refer_ipd_pdx" class="summary-table-container"></div></div></div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด Refer IPD</h6>
+        <div class="table-responsive"><table id="tableReferIPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>วันที่</th><th>เวลา</th><th>ประเภท</th><th>Ward</th><th>PDX</th></tr></thead><tbody id="tbodyReferIPD"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>

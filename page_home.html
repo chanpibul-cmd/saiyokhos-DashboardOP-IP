@@ -1,0 +1,101 @@
+<div id="page-home" class="page-section active">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold text-dark"><i class="bi bi-speedometer2"></i> ภาพรวมโรงพยาบาลไทรโยค (SaiyokHospital Overview)</h3>
+      <span class="text-muted">สรุปสถานการณ์ล่าสุดจากข้อมูลทั้งหมด</span>
+    </div>
+    <div class="text-end">
+      <small class="text-muted d-block">อัปเดตข้อมูลล่าสุด</small>
+      <span id="homeLastUpdate" class="badge bg-secondary">...</span>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <small class="text-muted fw-bold">ผู้ป่วยนอก (OPD)</small>
+          <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary"><i class="bi bi-people-fill fs-5"></i></div>
+        </div>
+        <h3 class="mb-0 text-primary fw-bold" id="home-kpi-opd-pt">0</h3>
+        <small class="text-secondary">visit</small>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <small class="text-muted fw-bold">ผู้ป่วยใน (IPD)</small>
+          <div class="bg-danger bg-opacity-10 p-2 rounded-circle text-danger"><i class="bi bi-hospital-fill fs-5"></i></div>
+        </div>
+        <h3 class="mb-0 text-danger fw-bold" id="home-kpi-ipd-pt">0</h3>
+        <small class="text-secondary">visit</small>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #198754 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="text-muted fw-bold">ค่ารักษา (Total Cost)</small>
+          <div class="bg-success bg-opacity-10 p-2 rounded-circle text-success"><i class="bi bi-currency-bitcoin fs-5"></i></div>
+        </div>
+        <h4 class="mb-2 text-success fw-bold" id="home-kpi-total-inc">0</h4>
+        <div class="small border-top pt-2">
+           <div class="d-flex justify-content-between"><span>💵 เงินสด:</span> <span id="home-inc-cash" class="fw-bold">0</span></div>
+           <div class="d-flex justify-content-between text-danger"><span>📉 หนี้:</span> <span id="home-inc-debt" class="fw-bold">0</span></div>
+           <div class="d-flex justify-content-between text-warning"><span>🛡️ ชดเชย:</span> <span id="home-inc-comp" class="fw-bold">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #6f42c1 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="text-muted fw-bold">ส่งต่อรักษา (Refer Out)</small>
+          <div class="bg-light p-2 rounded-circle" style="color:#6f42c1"><i class="bi bi-ambulance fs-5"></i></div>
+        </div>
+        <h3 class="mb-2 text-purple fw-bold" style="color:#6f42c1" id="home-kpi-refer">0</h3>
+        <div class="small border-top pt-2">
+           <div class="d-flex justify-content-between"><span>OPD:</span> <span id="home-refer-opd" class="fw-bold">0</span></div>
+           <div class="d-flex justify-content-between"><span>IPD:</span> <span id="home-refer-ipd" class="fw-bold">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white fw-bold border-0 pt-3 ps-3">📊 สัดส่วนค่ารักษา (OPD vs IPD)</div>
+        <div class="card-body"><div id="chart_home_income" class="chart-container" style="height: 300px;"></div></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white fw-bold border-0 pt-3 ps-3">🏥 เปรียบเทียบปริมาณผู้ป่วย visit </div>
+        <div class="card-body"><div id="chart_home_volume" class="chart-container" style="height: 300px;"></div></div>
+      </div>
+    </div>
+  </div>
+  
+   <div class="row g-3">
+      <div class="col-md-6">
+         <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold border-0 pt-3 ps-3 text-success">🦠 5 อันดับ โรคที่พบบ่อย (OPD)</div>
+            <div class="card-body p-0">
+               <ul class="list-group list-group-flush" id="home-top-opd-list">
+                 </ul>
+            </div>
+         </div>
+      </div>
+      <div class="col-md-6">
+         <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold border-0 pt-3 ps-3 text-danger">🦠 5 อันดับ โรคที่พบบ่อย (IPD)</div>
+            <div class="card-body p-0">
+               <ul class="list-group list-group-flush" id="home-top-ipd-list">
+                 </ul>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css">
+
+  <?!= include('css'); ?>
+</head>
+<body>
+
+  <button class="btn btn-dark mobile-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header"><i class="bi bi-hospital"></i> Saiyok Hospital Data</div>
+    <div class="d-flex flex-column mt-2">
+      <a class="nav-link active" onclick="switchPage('home')"><i class="bi bi-house-door"></i> ภาพรวม (Home)</a>
+      <a class="nav-link" onclick="switchPage('opd')"><i class="bi bi-people"></i> ผู้ป่วยนอก (OPD)</a>
+      <a class="nav-link" onclick="switchPage('ipd')"><i class="bi bi-hospital-fill"></i> ผู้ป่วยใน (IPD)</a>
+      <a class="nav-link" onclick="switchPage('income_right')"><i class="bi bi-wallet2"></i> รายได้ต่อสิทธิ</a>
+      <a class="nav-link" onclick="switchPage('refer')"><i class="bi bi-truck"></i> ข้อมูลรีเฟอร์ (Refer)</a>
+      <a class="nav-link" onclick="switchPage('disease')"><i class="bi bi-virus"></i> อันดับโรค (Ranking)</a>
+    
+
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <?!= include('page_home'); ?>
+    <?!= include('page_opd'); ?>
+    <?!= include('page_ipd'); ?>
+     <?!= include('page_income_right'); ?>
+    <?!= include('page_refer'); ?>
+    <?!= include('page_disease'); ?>
+   
+  </main>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+
+  <?!= include('js'); ?>
+</body>
+</html>

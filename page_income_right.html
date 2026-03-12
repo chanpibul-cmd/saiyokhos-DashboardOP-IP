@@ -1,0 +1,79 @@
+<div id="page-income_right" class="page-section">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-success fw-bold">💰 รายได้ต่อสิทธิการรักษา(Income by Right)</h3>
+    <div class="text-muted small" id="lastUpdatedIncomeRight">...</div>
+  </div>
+
+  <ul class="nav nav-pills mb-3" id="incomeRightTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-inc-opd" data-bs-toggle="pill" data-bs-target="#content-inc-opd" type="button" onclick="setTimeout(updateIncomeRight,200)">OPD</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-inc-ipd" data-bs-toggle="pill" data-bs-target="#content-inc-ipd" type="button" onclick="setTimeout(updateIncomeRight,200)">IPD</button>
+    </li>
+  </ul>
+
+  <div class="filter-section mb-4">
+    <div class="row g-2">
+      <div class="col-6 col-md-3">
+        <label class="small fw-bold">📅 เริ่มต้น</label>
+        <input type="date" id="incRightStart" class="form-control form-control-sm" onchange="updateIncomeRight()">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="small fw-bold">📅 สิ้นสุด</label>
+        <input type="date" id="incRightEnd" class="form-control form-control-sm" onchange="updateIncomeRight()">
+      </div>
+      <div class="col-12 col-md-2 d-flex align-items-end ms-auto">
+        <button class="btn btn-secondary btn-sm w-100" onclick="resetIncomeRight()">
+          <i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="content-inc-opd">
+      <div class="card p-3 border-0 shadow-sm">
+        <h6 class="text-primary fw-bold mb-3">🏥 สรุปรายได้แยกตามสิทธิ (OPD)</h6>
+        <div class="table-responsive">
+          <table id="tableIncRightOPD" class="table table-sm table-striped table-hover w-100">
+            <thead class="table-light">
+              <tr>
+                <th>สิทธิการรักษา</th>
+                <th class="text-end text-success">ค่าใช้จ่าย</th>
+                <th class="text-end text-info">เงินสด</th>
+                <th class="text-end text-danger">ลูกหนี้เคลม</th>
+                <th class="text-end text-warning">ชดเชย</th>
+                <th class="text-end text-primary fw-bold">คงเหลือ (เคลม-ชดเชย)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIncRightOPD"></tbody>
+            <tfoot class="table-light fw-bold" id="tfootIncRightOPD"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="content-inc-ipd">
+      <div class="card p-3 border-0 shadow-sm">
+        <h6 class="text-danger fw-bold mb-3">🛌 สรุปรายได้แยกตามสิทธิ (IPD)</h6>
+        <div class="table-responsive">
+          <table id="tableIncRightIPD" class="table table-sm table-striped table-hover w-100">
+            <thead class="table-light">
+              <tr>
+                <th>สิทธิการรักษา</th>
+                <th class="text-end text-success">ค่าใช้จ่าย</th>
+                <th class="text-end text-info">เงินสด</th>
+                <th class="text-end text-danger">ลูกหนี้เคลม</th>
+                <th class="text-end text-warning">ชดเชย</th>
+                <th class="text-end text-primary fw-bold">คงเหลือ (เคลม-ชดเชย)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIncRightIPD"></tbody>
+            <tfoot class="table-light fw-bold" id="tfootIncRightIPD"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

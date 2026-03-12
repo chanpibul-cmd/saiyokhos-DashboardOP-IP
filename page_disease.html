@@ -1,0 +1,86 @@
+<div id="page-disease" class="page-section">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-success fw-bold">🦠 Disease Ranking (อันดับโรค)</h3>
+    <div class="text-muted small" id="lastUpdatedDisease">...</div>
+  </div>
+
+  <ul class="nav nav-pills mb-3" id="diseaseTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-disease-opd" data-bs-toggle="pill" data-bs-target="#content-disease-opd" type="button" onclick="setTimeout(updateDisease,200)">OPD Ranking</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-disease-ipd" data-bs-toggle="pill" data-bs-target="#content-disease-ipd" type="button" onclick="setTimeout(updateDisease,200)">IPD Ranking</button>
+    </li>
+  </ul>
+
+  <div class="filter-section mb-4">
+    <div class="row g-2">
+      <div class="col-6 col-md-2"><label class="small fw-bold">📅 เริ่มต้น</label><input type="date" id="diseaseStart" class="form-control form-control-sm" onchange="updateDisease()"></div>
+      <div class="col-6 col-md-2"><label class="small fw-bold">📅 สิ้นสุด</label><input type="date" id="diseaseEnd" class="form-control form-control-sm" onchange="updateDisease()"></div>
+      <div class="col-6 col-md-3 filter-opd-only"><label class="small fw-bold">🏥 แผนก (OPD)</label><select id="diseaseOpdDept" class="form-select form-select-sm" onchange="updateDisease()"><option value="All">ทั้งหมด</option></select></div>
+      <div class="col-6 col-md-2 filter-ipd-only d-none"><label class="small fw-bold">🏥 แผนก (IPD)</label><select id="diseaseIpdDept" class="form-select form-select-sm" onchange="updateDisease()"><option value="All">ทั้งหมด</option></select></div>
+      <div class="col-6 col-md-2 filter-ipd-only d-none"><label class="small fw-bold">🛌 Ward</label><select id="diseaseIpdWard" class="form-select form-select-sm" onchange="updateDisease()"><option value="All">ทั้งหมด</option></select></div>
+      <div class="col-12 col-md-2 d-flex align-items-end ms-auto"><button class="btn btn-secondary btn-sm w-100" onclick="resetDisease()"><i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต</button></div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="content-disease-opd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 text-center border-success border-start border-4">
+            <h5 class="text-muted">จำนวนผู้ป่วยรวม (OPD)</h5>
+            <div class="display-5 fw-bold text-success" id="kpi-disease-opd-count">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🏆 อันดับโรคที่พบบ่อย (ทั้งหมด)</h6>
+            <div id="chart_disease_opd_top" class="chart-container-lg" style="min-height: 400px;"></div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🏥 สัดส่วนแยกตามแผนก</h6>
+            <div id="chart_disease_opd_dept" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด (เรียงตามจำนวน)</h6>
+        <div class="table-responsive"><table id="tableDiseaseOPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>อันดับ</th><th>รหัสโรค (PDX)</th><th>แผนกที่พบบ่อยสุด</th><th>จำนวนรวม (ราย)</th></tr></thead><tbody id="tbodyDiseaseOPD"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="content-disease-ipd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 text-center border-danger border-start border-4">
+            <h5 class="text-muted">จำนวนผู้ป่วยรวม (IPD)</h5>
+            <div class="display-5 fw-bold text-danger" id="kpi-disease-ipd-count">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <div class="card p-3 h-100">
+             <h6 class="text-secondary fw-bold">🏆 อันดับโรคที่พบบ่อย (ทั้งหมด)</h6>
+            <div id="chart_disease_ipd_top" class="chart-container-lg" style="min-height: 400px;"></div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🛌 สัดส่วนแยกตาม Ward</h6>
+            <div id="chart_disease_ipd_ward" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด (เรียงตามจำนวน)</h6>
+        <div class="table-responsive"><table id="tableDiseaseIPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>อันดับ</th><th>รหัสโรค (PDX)</th><th>แผนก</th><th>Ward</th><th>จำนวนรวม (ราย)</th></tr></thead><tbody id="tbodyDiseaseIPD"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>

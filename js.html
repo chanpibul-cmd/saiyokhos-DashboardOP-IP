@@ -1,0 +1,647 @@
+<script>
+    google.charts.load('current', {'packages':['corechart', 'bar']});
+    google.charts.setOnLoadCallback(init);
+
+    let DB = {};
+    let opdF = [], ipdF = [];
+
+    function init() { google.script.run.withSuccessHandler(d => { DB=d; onLoaded(); }).getData(); }
+
+    function onLoaded() {
+      try {
+          // 1. Setup Global Info
+          if(DB.opd1 && DB.opd1.length > 0) { 
+             let dStr = DB.opd1[0][0] || '-';
+             $('#lastUpdatedOpd').text("ข้อมูล ณ: "+dStr); 
+             $('#homeLastUpdate').text(dStr); 
+             $('#lastUpdatedIncomeRight').text("ข้อมูล ณ: "+dStr);
+          }
+          if(DB.dataIp && DB.dataIp.length > 0) {
+             let maxD = null; 
+             DB.dataIp.forEach(r => { let d = parseDate(r[7]); if(d && (!maxD || d > maxD)) maxD = d; });
+             let dateStr = maxD ? maxD.getDate()+'/'+(maxD.getMonth()+1)+'/'+maxD.getFullYear() : '-';
+             $('#lastUpdatedIpd').text("ข้อมูล ณ: " + dateStr);
+          }
+
+          // 2. Setup Dropdowns
+          setupDropdownSafe('opdDept', DB.opd1, 1);
+          setupDropdownSafe('opdStatus', DB.opd1, 2);
+          setupDropdownSafe('opdRight', DB.opd2, 2);
+
+          setupDropdownSafe('ipdWard', DB.dataIp, 11);
+          setupDropdownSafe('ipdDept', DB.dataIp, 13);
+          
+          let ipdRights = new Set();
+          if(DB.dataIp) DB.dataIp.forEach(r => { if(r[16]) ipdRights.add(String(r[16]).trim()); });
+          let elIpdRight = document.getElementById('ipdRight');
+          if(elIpdRight && ipdRights.size > 0) { 
+              elIpdRight.innerHTML='<option value="All">ทั้งหมด</option>';
+              Array.from(ipdRights).sort().forEach(x => elIpdRight.add(new Option(x, x)));
+          }
+
+          setupReferDropdown();
+          setupDiseaseDropdowns();
+
+          // 3. Listeners
+          $('button[data-bs-toggle="pill"]').on('shown.bs.tab', function (e) {
+            let tid = e.target.id;
+            if(tid.includes('refer')) { toggleReferFilters(tid); setTimeout(updateRefer, 100); }
+            if(tid.includes('disease')) { toggleDiseaseFilters(tid); setTimeout(updateDisease, 100); }
+            if(tid.includes('inc')) { setTimeout(updateIncomeRight, 100); }
+          });
+
+          // 4. Init
+          updateHome();
+          // Auto switch page
+          if($('#page-home').hasClass('active') || !$('.page-section.active').length) { 
+             $('.page-section').removeClass('active'); $('#page-home').addClass('active');
+          }
+          else if($('#page-opd').hasClass('active')) updateOPD();
+          else if($('#page-ipd').hasClass('active')) updateIPD();
+          else if($('#page-refer').hasClass('active')) updateRefer();
+          else if($('#page-disease').hasClass('active')) updateDisease();
+          else if($('#page-income_right').hasClass('active')) updateIncomeRight();
+
+      } catch (e) { console.error("Init Error: ", e); }
+    }
+
+    function setupDropdownSafe(elemId, data, index) {
+        let el = document.getElementById(elemId);
+        if(!el || !data) return;
+        let s = new Set();
+        data.forEach(r => { if(r[index]) s.add(String(r[index]).trim()); });
+        el.innerHTML = '<option value="All">ทั้งหมด</option>';
+        Array.from(s).sort().forEach(x => el.add(new Option(x, x)));
+    }
+
+    // ==========================================
+    // MODULE: INCOME BY RIGHT (RE-WRITTEN)
+    // ==========================================
+    window.updateIncomeRight = function() {
+        // Show loading state
+        $('#lastUpdatedIncomeRight').text("กำลังคำนวณ...");
+        
+        // Use timeout to allow UI to render "Loading..." text
+        setTimeout(() => {
+            try {
+                let isOpd = $('#tab-inc-opd').hasClass('active');
+                let s = document.getElementById('incRightStart').value;
+                let e = document.getElementById('incRightEnd').value;
+                let start = s ? new Date(s) : null; if(start) start.setHours(0,0,0,0);
+                let end = e ? new Date(e) : null; if(end) end.setHours(23,59,59,999);
+
+                let agg = {}; 
+
+                if(isOpd) {
+                    // OPD: Source OPD2, Date Col A (Idx 0)
+                    // Cols: Right(2), Cost(3), Cash(4), Claim(5), Comp(6)
+                    if(DB.opd2) {
+                        DB.opd2.forEach(r => {
+                            let d = parseDate(r[0]); 
+                            if(!isDateInRange(d, start, end)) return;
+                            
+                            let right = String(r[2]||'ไม่ระบุ').trim();
+                            let cost = toFloat(r[3]);
+                            let cash = toFloat(r[4]);
+                            let claim = toFloat(r[5]); 
+                            let comp = toFloat(r[6]);
+
+                            if(!agg[right]) agg[right] = {cost:0, cash:0, claim:0, comp:0};
+                            agg[right].cost += cost; agg[right].cash += cash;
+                            agg[right].claim += claim; agg[right].comp += comp;
+                        });
+                    }
+                    renderIncomeRightTable('tableIncRightOPD', 'tbodyIncRightOPD', 'tfootIncRightOPD', agg);
+                } else {
+                    // IPD: Source DATAIP, Date Col H (Idx 7)
+                    // Cols: Right(16), Cost(21), Cash(23), Claim(28), Comp(32)
+                    if(DB.dataIp) {
+                        DB.dataIp.forEach(r => {
+                            let d = parseDate(r[7]); 
+                            if(!isDateInRange(d, start, end)) return;
+
+                            let right = String(r[16]||'ไม่ระบุ').trim();
+                            let cost = toFloat(r[21]); // V
+                            let cash = toFloat(r[23]); // X
+                            let claim = toFloat(r[28]); // AC
+                            let comp = toFloat(r[32]); // AG
+
+                            if(!agg[right]) agg[right] = {cost:0, cash:0, claim:0, comp:0};
+                            agg[right].cost += cost; agg[right].cash += cash;
+                            agg[right].claim += claim; agg[right].comp += comp;
+                        });
+                    }
+                    renderIncomeRightTable('tableIncRightIPD', 'tbodyIncRightIPD', 'tfootIncRightIPD', agg);
+                }
+                
+                // Update Status
+                let count = Object.keys(agg).length;
+                $('#lastUpdatedIncomeRight').text(`คำนวณเสร็จสิ้น (${count} สิทธิ์)`);
+
+            } catch(err) { 
+                console.error("Income Right Error:", err); 
+                $('#lastUpdatedIncomeRight').text("เกิดข้อผิดพลาด");
+            }
+        }, 50); // Short delay to allow UI refresh
+    }
+
+    function renderIncomeRightTable(tableId, tbodyId, tfootId, agg) {
+        // Destroy old datatable first
+        if ($.fn.DataTable.isDataTable('#'+tableId)) $('#'+tableId).DataTable().destroy();
+
+        let rows = [];
+        let total = {cost:0, cash:0, claim:0, comp:0, rem:0};
+
+        Object.keys(agg).sort().forEach(k => {
+            let d = agg[k];
+            let rem = d.comp - d.claim; // สูตร: ชดเชย - เคลม
+            rows.push([k, d.cost, d.cash, d.claim, d.comp, rem]);
+            total.cost += d.cost; total.cash += d.cash; 
+            total.claim += d.claim; total.comp += d.comp; total.rem += rem;
+        });
+
+        // Generate HTML
+        let h = rows.map(r => `
+            <tr>
+                <td>${r[0]}</td>
+                <td class="text-end">${fmtNum(r[1])}</td>
+                <td class="text-end">${fmtNum(r[2])}</td>
+                <td class="text-end">${fmtNum(r[3])}</td>
+                <td class="text-end">${fmtNum(r[4])}</td>
+                <td class="text-end fw-bold ${r[5]<0?'text-danger':'text-success'}">${fmtNum(r[5])}</td>
+            </tr>
+        `).join('');
+        
+        document.getElementById(tbodyId).innerHTML = h;
+
+        let f = `
+            <tr>
+                <td>รวมทั้งสิ้น</td>
+                <td class="text-end">${fmtNum(total.cost)}</td>
+                <td class="text-end">${fmtNum(total.cash)}</td>
+                <td class="text-end">${fmtNum(total.claim)}</td>
+                <td class="text-end">${fmtNum(total.comp)}</td>
+                <td class="text-end ${total.rem<0?'text-danger':'text-success'}">${fmtNum(total.rem)}</td>
+            </tr>
+        `;
+        document.getElementById(tfootId).innerHTML = f;
+
+        // Re-init DataTable
+        $('#'+tableId).DataTable({
+            pageLength: 20, 
+            dom: 'Bfrtip', 
+            buttons: ['excelHtml5'],
+            order: [[0, 'asc']],
+            language: { emptyTable: "ไม่พบข้อมูลในช่วงวันที่เลือก" }
+        });
+    }
+    
+    function resetIncomeRight() { $('#incRightStart, #incRightEnd').val(''); updateIncomeRight(); }
+
+    // ==========================================
+    // MODULE: HOME
+    // ==========================================
+    window.updateHome = function() {
+       let opdCount=0, opdCost=0, opdCash=0, opdDebt=0, opdComp=0;
+       if(DB.opd1) opdCount=DB.opd1.reduce((s,r)=>s+toFloat(r[3]),0);
+       if(DB.opd2) DB.opd2.forEach(r => { 
+           let cost=toFloat(r[3]), cash=toFloat(r[4]), claim=toFloat(r[5]), comp=toFloat(r[6]);
+           opdCost += cost; opdCash += cash; opdComp += comp; 
+           opdDebt += (comp - claim); 
+       });
+
+       let ipdCount=0, ipdCost=0, ipdCash=0, ipdDebt=0, ipdComp=0;
+       if(DB.dataIp) {
+          let anSet=new Set();
+          DB.dataIp.forEach(r => {
+             if(r[1]) anSet.add(String(r[1]).trim());
+             let cost=toFloat(r[21]), cash=toFloat(r[23]), claim=toFloat(r[28]), comp=toFloat(r[32]);
+             ipdCost += cost; ipdCash += cash; ipdComp += comp; 
+             ipdDebt += (comp - claim);
+          });
+          ipdCount = anSet.size;
+       }
+
+       let refOpd = DB.referOp ? DB.referOp.length : 0;
+       let refIpd = 0; 
+       if(DB.referIp) refIpd = DB.referIp.filter(r => String(r[2]||'').toLowerCase().includes('by transfer')).length;
+
+       $('#home-kpi-opd-pt').text(opdCount.toLocaleString());
+       $('#home-kpi-ipd-pt').text(ipdCount.toLocaleString());
+       $('#home-kpi-total-inc').text(fmtNum(opdCost + ipdCost));
+       $('#home-inc-cash').text(fmtNum(opdCash + ipdCash));
+       $('#home-inc-debt').text(fmtNum(opdDebt + ipdDebt));
+       $('#home-inc-comp').text(fmtNum(opdComp + ipdComp));
+       $('#home-kpi-refer').text((refOpd + refIpd).toLocaleString());
+       $('#home-refer-opd').text(refOpd.toLocaleString());
+       $('#home-refer-ipd').text(refIpd.toLocaleString());
+
+       if(document.getElementById('chart_home_income')) {
+           new google.visualization.PieChart(document.getElementById('chart_home_income')).draw(
+               google.visualization.arrayToDataTable([['Source','Amount'],['OPD Cost',opdCost],['IPD Cost',ipdCost]]), 
+               {pieHole:0.4, colors:['#0d6efd','#dc3545'], chartArea:{width:'90%',height:'85%'}, legend:{position:'bottom'}}
+           );
+       }
+       if(document.getElementById('chart_home_volume')) {
+           new google.visualization.ColumnChart(document.getElementById('chart_home_volume')).draw(
+               google.visualization.arrayToDataTable([['Type','Patients',{role:'style'}],['OPD',opdCount,'#0d6efd'],['IPD',ipdCount,'#dc3545']]), 
+               {legend:'none', chartArea:{width:'80%',height:'80%'}}
+           );
+       }
+       renderHomeTopList('home-top-opd-list', DB.topOp, 2, 3);
+       renderHomeTopList('home-top-ipd-list', DB.topIp, 3, 4);
+    }
+
+    function renderHomeTopList(elId, data, keyIdx, valIdx) {
+        let el = document.getElementById(elId);
+        if(!el) return;
+        if(!data || data.length === 0) { el.innerHTML = '<li class="list-group-item text-muted">ไม่มีข้อมูล</li>'; return; }
+        let m = {};
+        data.forEach(r => { let k = String(r[keyIdx]||'-').trim(); let v = toFloat(r[valIdx]); m[k] = (m[k]||0)+v; });
+        let sorted = Object.keys(m).sort((a,b)=>m[b]-m[a]).slice(0, 5);
+        let h = sorted.map((k, i) => `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2"><div><span class="badge bg-secondary rounded-pill me-2">${i+1}</span> ${k}</div><span class="fw-bold">${fmtInt(m[k])}</span></li>`).join('');
+        el.innerHTML = h;
+    }
+
+    // ==========================================
+    // MODULE: OPD
+    // ==========================================
+    window.updateOPD = function() {
+      let f = getFilterValues('opd');
+      let kpi = {pt:0, inc:0, cash:0, debt:0, comp:0};
+      
+      if (DB.opd2 && DB.opd2.length > 0) {
+          opdF = DB.opd2.filter(r => checkCommonFilter(r, 0, 1, f) && (f.right==='All' || String(r[2]).trim()===f.right));
+          opdF.forEach(r => {
+            kpi.inc += toFloat(r[3]); kpi.cash += toFloat(r[4]); 
+            let claim = toFloat(r[5]); let comp = toFloat(r[6]);
+            kpi.comp += comp; 
+            kpi.debt += (comp - claim);
+          });
+          drawDailyChart('opd', 'chart_opd_daily', opdF, 0, 4, 5, 6); 
+          drawFinChart('chart_opd_dept_fin', 'table_opd_dept_fin', opdF, 1, 'แผนก');
+          drawFinChart('chart_opd_rights', 'table_opd_rights', opdF, 2, 'สิทธิ์');
+          renderTable('tableOPD', opdF);
+      } else { opdF = []; $('#tableOPD').empty(); }
+
+      if (DB.opd1 && DB.opd1.length > 0) {
+          let opdF_Stat = DB.opd1.filter(r => checkCommonFilter(r, 0, 1, f) && (f.status==='All' || String(r[2]).trim()===f.status));
+          kpi.pt = opdF_Stat.reduce((s,r)=>s+toFloat(r[3]),0);
+          drawBarChart('chart_opd_dept_count', 'table_opd_dept_count', opdF_Stat, 1, 3, 'แผนก', 'จำนวน', ['#0d6efd']);
+          drawBarChart('chart_opd_status', 'table_opd_status', opdF_Stat, 2, 3, 'สถานะ', 'จำนวน', ['#fd7e14']);
+      }
+      renderKPI('opd', kpi);
+    }
+
+    // ==========================================
+    // MODULE: IPD
+    // ==========================================
+    window.updateIPD = function() {
+      if (!DB.dataIp) return;
+      let f = getFilterValues('ipd'); 
+      ipdF = DB.dataIp.filter(r => {
+        let d = parseDate(r[7]); 
+        if(!isDateInRange(d, f.start, f.end)) return false;
+        if(f.dept !== 'All' && String(r[13]).trim() !== f.dept) return false; 
+        if(f.ward !== 'All' && String(r[11]).trim() !== f.ward) return false;
+        if(f.right !== 'All' && String(r[16]).trim() !== f.right) return false; 
+        return true;
+      });
+
+      let hnSet = new Set(), anSet = new Set();
+      let kpi = {inc:0, cash:0, debt:0, comp:0};
+      
+      ipdF.forEach(r => {
+        if(r[0]) hnSet.add(String(r[0]).trim());
+        if(r[1]) anSet.add(String(r[1]).trim());
+        let cost = toFloat(r[21]); let cash = toFloat(r[23]); let claim = toFloat(r[28]); let comp = toFloat(r[32]);
+        kpi.inc += cost; kpi.cash += cash; kpi.comp += comp; 
+        kpi.debt += (comp - claim);
+      });
+      
+      $('#kpi-ipd-pt').text(hnSet.size.toLocaleString() + " / " + anSet.size.toLocaleString());
+      $('#kpi-ipd-inc').text(fmtNum(kpi.inc)); $('#kpi-ipd-cash').text(fmtNum(kpi.cash)); $('#kpi-ipd-debt').text(fmtNum(kpi.debt)); $('#kpi-ipd-comp').text(fmtNum(kpi.comp));
+
+      drawDailyChart('ipd', 'chart_ipd_daily', ipdF, 7, 23, 28, 32); 
+      drawBarChart('chart_ipd_ward_count', 'table_ipd_ward_count', ipdF, 11, null, 'Ward', 'จำนวน', ['#20c997']);
+      drawBarChart('chart_ipd_status', 'table_ipd_status', ipdF, 26, null, 'สถานะ', 'จำนวน', ['#6f42c1']);
+      drawFinChartIPD('chart_ipd_dept_fin', 'table_ipd_dept_fin', ipdF, 11, 'Ward'); 
+      drawFinChartIPD('chart_ipd_rights', 'table_ipd_rights', ipdF, 16, 'สิทธิ์');
+      renderTableIPD('tableIPD', ipdF);
+    }
+
+    // ==========================================
+    // MODULE: REFER
+    // ==========================================
+    function setupReferDropdown() {
+       setupDropdownSafe('referDept', DB.referOp, 3);
+       setupDropdownSafe('referWard', DB.referIp, 3);
+       setupDropdownSafe('referIpdDept', DB.referIp, 4);
+    }
+
+    function toggleReferFilters(tabId) {
+        if(tabId === 'tab-refer-opd') { $('.filter-refer-opd').removeClass('d-none'); $('.filter-refer-ipd').addClass('d-none'); } 
+        else { $('.filter-refer-opd').addClass('d-none'); $('.filter-refer-ipd').removeClass('d-none'); }
+    }
+
+    function getShift(timeStr) {
+        if(!timeStr) return 'ดึก (00-08)';
+        let clean = timeStr.replace('.', ':'); let parts = clean.split(':'); if(parts.length < 1) return 'ดึก (00-08)';
+        let h = parseInt(parts[0]); if(isNaN(h)) return 'ดึก (00-08)';
+        if(h >= 8 && h <= 15) return 'เช้า (08-16)'; if(h >= 16 && h <= 23) return 'บ่าย (16-00)'; return 'ดึก (00-08)';
+    }
+
+    window.updateRefer = function() {
+      let isOpd = $('#tab-refer-opd').hasClass('active');
+      let data = isOpd ? DB.referOp : DB.referIp;
+      if(!data) return;
+
+      let s=document.getElementById('referStart').value, e=document.getElementById('referEnd').value;
+      let start=s?new Date(s):null; if(start)start.setHours(0,0,0,0);
+      let end=e?new Date(e):null; if(end)end.setHours(23,59,59,999);
+      
+      let opdDept = document.getElementById('referDept').value;
+      let ipdWard = document.getElementById('referWard').value;
+      let ipdDept = document.getElementById('referIpdDept').value;
+
+      let filtered = data.filter(r => {
+        let d = parseDate(r[0]);
+        if(!isDateInRange(d, start, end)) return false;
+        
+        if(isOpd) {
+             if(opdDept !== 'All' && String(r[3]).trim() !== opdDept) return false;
+        } else {
+             let type = String(r[2]||'').toLowerCase();
+             if(!type.includes("by transfer")) return false;
+             if(ipdWard !== 'All' && String(r[3]).trim() !== ipdWard) return false;
+             if(ipdDept !== 'All' && String(r[4]).trim() !== ipdDept) return false;
+        }
+        return true;
+      });
+
+      let daily = {}, monthly = {}, shiftData = {};
+      let shiftCounts = {'เช้า (08-16)': 0, 'บ่าย (16-00)': 0, 'ดึก (00-08)': 0};
+      let uniqueDays = new Set();
+
+      filtered.forEach(r => {
+         let d = parseDate(r[0]);
+         if(d && !isNaN(d.getTime())) {
+             let dKey = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+             let mKey = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+             let shift = getShift(String(r[1]));
+             
+             daily[dKey] = (daily[dKey]||0)+1;
+             monthly[mKey] = (monthly[mKey]||0)+1;
+             
+             if(!shiftData[dKey]) shiftData[dKey] = {'เช้า (08-16)':0, 'บ่าย (16-00)':0, 'ดึก (00-08)':0};
+             shiftData[dKey][shift]++; shiftCounts[shift]++; uniqueDays.add(dKey);
+         }
+      });
+
+      let numDays = uniqueDays.size || 1;
+      let avgText = `เฉลี่ย: เช้า ${(shiftCounts['เช้า (08-16)']/numDays).toFixed(1)}, บ่าย ${(shiftCounts['บ่าย (16-00)']/numDays).toFixed(1)}, ดึก ${(shiftCounts['ดึก (00-08)']/numDays).toFixed(1)}`;
+
+      if(isOpd) {
+           $('#kpi-refer-opd-count').text(filtered.length.toLocaleString());
+           $('#refer-opd-shift-avg').text(avgText);
+           drawTimeChart('chart_refer_opd_daily', daily, 'Date', '#6610f2');
+           drawTimeChart('chart_refer_opd_monthly', monthly, 'Month', '#6610f2');
+           drawShiftChart('chart_refer_opd_shift', shiftData);
+           drawBarChart('chart_refer_opd_dept', 'table_refer_opd_dept', filtered, 3, null, 'จุดส่ง', 'จำนวน', ['#6610f2']);
+           drawTopChart('chart_refer_opd_pdx', 'table_refer_opd_pdx', filtered, 4, 'โรค (PDX)', 10, ['#d63384']);
+           renderReferTable('tableReferOPD', 'tbodyReferOPD', filtered, 4);
+      } else {
+           $('#kpi-refer-ipd-count').text(filtered.length.toLocaleString());
+           $('#refer-ipd-shift-avg').text(avgText);
+           drawTimeChart('chart_refer_ipd_daily', daily, 'Date', '#fd7e14');
+           drawTimeChart('chart_refer_ipd_monthly', monthly, 'Month', '#fd7e14');
+           drawShiftChart('chart_refer_ipd_shift', shiftData);
+           drawBarChart('chart_refer_ipd_ward', 'table_refer_ipd_ward', filtered, 3, null, 'Ward', 'จำนวน', ['#fd7e14']); 
+           drawTopChart('chart_refer_ipd_pdx', 'table_refer_ipd_pdx', filtered, 5, 'โรค (PDX)', 10, ['#20c997']); 
+           renderReferTable('tableReferIPD', 'tbodyReferIPD', filtered, 5);
+      }
+    }
+
+    // ==========================================
+    // MODULE: DISEASE
+    // ==========================================
+    function setupDiseaseDropdowns() {
+        setupDropdownSafe('diseaseOpdDept', DB.topOp, 1);
+        setupDropdownSafe('diseaseIpdDept', DB.topIp, 1);
+        setupDropdownSafe('diseaseIpdWard', DB.topIp, 2);
+    }
+
+    function toggleDiseaseFilters(tabId) {
+        if(tabId === 'tab-disease-opd') { $('.filter-opd-only').removeClass('d-none'); $('.filter-ipd-only').addClass('d-none'); } 
+        else { $('.filter-opd-only').addClass('d-none'); $('.filter-ipd-only').removeClass('d-none'); }
+    }
+
+    window.updateDisease = function() {
+      let isOpd = $('#tab-disease-opd').hasClass('active');
+      let data = isOpd ? DB.topOp : DB.topIp;
+      if(!data) return;
+
+      let s = document.getElementById('diseaseStart').value;
+      let e = document.getElementById('diseaseEnd').value;
+      let start = s ? new Date(s) : null; if(start) start.setHours(0,0,0,0);
+      let end = e ? new Date(e) : null; if(end) end.setHours(23,59,59,999);
+      
+      let fOpdDept = document.getElementById('diseaseOpdDept').value;
+      let fIpdDept = document.getElementById('diseaseIpdDept').value;
+      let fIpdWard = document.getElementById('diseaseIpdWard').value;
+
+      let filtered = data.filter(r => {
+         let d = parseDate(r[0]);
+         if(!isDateInRange(d, start, end)) return false;
+         
+         if(isOpd) {
+             if(fOpdDept !== 'All' && String(r[1]).trim() !== fOpdDept) return false;
+         } else {
+             if(fIpdDept !== 'All' && String(r[1]).trim() !== fIpdDept) return false;
+             if(fIpdWard !== 'All' && String(r[2]).trim() !== fIpdWard) return false;
+         }
+         return true;
+      });
+
+      if(isOpd) renderDiseaseOPD(filtered); else renderDiseaseIPD(filtered);
+    }
+
+    function renderDiseaseOPD(data) {
+       let pdxMap={}, deptMap={}, total=0;
+       data.forEach(r => { 
+           let pdx=String(r[2]||'Unknown').trim();
+           let dept=String(r[1]||'N/A').trim();
+           let cnt=toFloat(r[3]); 
+           total+=cnt; 
+           pdxMap[pdx]=(pdxMap[pdx]||0)+cnt; 
+           deptMap[dept]=(deptMap[dept]||0)+cnt; 
+       });
+       $('#kpi-disease-opd-count').text(fmtInt(total));
+       drawSimpleBarChart('chart_disease_opd_top', pdxMap, 'PDX', 20, '#198754');
+       drawSimplePieChart('chart_disease_opd_dept', deptMap);
+       
+       let sortedPdx = Object.keys(pdxMap).sort((a,b)=>pdxMap[b]-pdxMap[a]);
+       let tableData = sortedPdx.map((k,i) => [i+1, k, getTopKeyForVal(data, 2, k, 1), fmtInt(pdxMap[k])]);
+       renderDataTableDisease('tableDiseaseOPD', 'tbodyDiseaseOPD', tableData, false);
+    }
+
+    function renderDiseaseIPD(data) {
+       let pdxMap={}, wardMap={}, total=0;
+       data.forEach(r => { 
+           let pdx=String(r[3]||'Unknown').trim();
+           let ward=String(r[2]||'N/A').trim();
+           let cnt=toFloat(r[4]); 
+           total+=cnt; 
+           pdxMap[pdx]=(pdxMap[pdx]||0)+cnt; 
+           wardMap[ward]=(wardMap[ward]||0)+cnt; 
+       });
+       $('#kpi-disease-ipd-count').text(fmtInt(total));
+       drawSimpleBarChart('chart_disease_ipd_top', pdxMap, 'PDX', 20, '#dc3545');
+       drawSimplePieChart('chart_disease_ipd_ward', wardMap);
+       
+       let sortedPdx = Object.keys(pdxMap).sort((a,b)=>pdxMap[b]-pdxMap[a]);
+       let tableData = sortedPdx.map((k,i) => [i+1, k, getTopKeyForVal(data, 3, k, 1), getTopKeyForVal(data, 3, k, 2), fmtInt(pdxMap[k])]);
+       renderDataTableDisease('tableDiseaseIPD', 'tbodyDiseaseIPD', tableData, true);
+    }
+
+    // ==========================================
+    // UTILITIES
+    // ==========================================
+    function isDateInRange(d, start, end) {
+        if(!d || isNaN(d.getTime())) return false;
+        if(start && d < start) return false;
+        if(end && d > end) return false;
+        return true;
+    }
+
+    function checkCommonFilter(r, idxD, idxDept, f) {
+        let d = parseDate(r[idxD]);
+        if(!isDateInRange(d, f.start, f.end)) return false;
+        if(f.dept !== 'All' && String(r[idxDept]).trim() !== f.dept) return false;
+        return true;
+    }
+
+    function parseDate(s) { 
+        if(!s) return null; if(s instanceof Date) return s; let str = String(s).trim(); if(!str) return null;
+        str = str.replace(/\./g, '/').replace(/-/g, '/');
+        let p = str.split('/');
+        if(p.length === 3) {
+            let v1 = parseInt(p[0]); let v2 = parseInt(p[1]); let v3 = parseInt(p[2]);
+            let y, m, d;
+            if (v1 > 1000) { y=v1; m=v2-1; d=v3; } else { d=v1; m=v2-1; y=v3; }
+            if (y > 2400) y -= 543;
+            let date = new Date(y, m, d);
+            return isNaN(date.getTime()) ? null : date;
+        }
+        let d = new Date(str); return isNaN(d.getTime()) ? null : d;
+    }
+
+    function drawBarChart(idChart, idTable, data, idxKey, idxVal, headKey, headVal, color) {
+      let map={}; data.forEach(r => { let k=String(r[idxKey]||'N/A').trim(), v=idxVal!==null?toFloat(r[idxVal]):1; map[k]=(map[k]||0)+v; });
+      let arr=[[headKey,headVal]]; let sorted=Object.keys(map).sort((a,b)=>map[b]-map[a]); sorted.forEach(k=>arr.push([k,map[k]]));
+      new google.visualization.BarChart(document.getElementById(idChart)).draw(google.visualization.arrayToDataTable(arr.length>1?arr:[['',''],['No Data',0]]), {legend:'none', colors:color, height:300, bar:{groupWidth:'50%'}, chartArea:{width:'75%',height:'80%',left:150, top:10, bottom:10}});
+      renderSummaryTableDataTable(idTable,[headKey,headVal],arr.slice(1),[false,true]);
+    }
+
+    function drawTopChart(idChart, idTable, data, idxKey, headKey, limit, color) {
+      let map={}; data.forEach(r => { let k=String(r[idxKey]||'N/A').trim(); map[k]=(map[k]||0)+1; });
+      let arr=[[headKey,'จำนวน']]; let sorted=Object.keys(map).sort((a,b)=>map[b]-map[a]).slice(0,limit); sorted.forEach(k=>arr.push([k,map[k]]));
+      new google.visualization.BarChart(document.getElementById(idChart)).draw(google.visualization.arrayToDataTable(arr.length>1?arr:[['',''],['No Data',0]]), {legend:'none', colors:color, height:300, bar:{groupWidth:'50%'}, chartArea:{width:'70%',height:'80%',left:150, top:10, bottom:10}});
+      renderSummaryTableDataTable(idTable,[headKey,'จำนวน'],arr.slice(1),[false,true]);
+    }
+
+    function drawSimpleBarChart(id, map, label, limit, color) {
+        let arr=[[label,'จำนวน', { role: 'annotation' }]]; 
+        let sorted=Object.keys(map).sort((a,b)=>map[b]-map[a]);
+        if(limit && limit > 0 && limit < sorted.length) sorted = sorted.slice(0, limit);
+        sorted.forEach(k=>arr.push([k, map[k], fmtInt(map[k])]));
+        let dynamicHeight = Math.max(300, sorted.length * 30);
+        new google.visualization.BarChart(document.getElementById(id)).draw(google.visualization.arrayToDataTable(arr.length>1?arr:[[label,'จำนวน', { role: 'annotation' }],['No Data',0,0]]), {legend:'none', colors:[color], height:dynamicHeight, bar:{groupWidth:'60%'}, chartArea:{width:'65%',height:'85%',left:200, top:20, bottom:20}, hAxis: {minValue:0}});
+    }
+
+    function drawTimeChart(id, map, labelType, color) {
+        let arr = [[labelType, 'จำนวน']];
+        Object.keys(map).sort().forEach(k => { let parts=k.split('-'); let lbl=k; if(parts.length===3)lbl=parts[2]+'/'+parts[1]; if(parts.length===2)lbl=parts[1]+'/'+parts[0]; arr.push([lbl, map[k]]); });
+        new google.visualization.ColumnChart(document.getElementById(id)).draw(google.visualization.arrayToDataTable(arr.length>1?arr:[['',''],['No Data',0]]), {legend:'none', colors:[color], height:300, chartArea:{width:'85%',height:'80%',left:50, top:10, bottom:10}});
+    }
+
+    function drawShiftChart(id, shiftData) {
+        let arr = [['Date', 'เช้า (08-16)', 'บ่าย (16-00)', 'ดึก (00-08)']];
+        Object.keys(shiftData).sort().forEach(k => { let s = shiftData[k]; let dObj = new Date(k); let lbl = dObj.getDate()+'/'+(dObj.getMonth()+1); arr.push([lbl, s['เช้า (08-16)'], s['บ่าย (16-00)'], s['ดึก (00-08)']]); });
+        new google.visualization.ColumnChart(document.getElementById(id)).draw(google.visualization.arrayToDataTable(arr.length>1?arr:[['','','',''],['No Data',0,0,0]]), {isStacked: true, colors: ['#0dcaf0', '#fd7e14', '#795548'], legend: 'bottom', height: 300, chartArea: {width:'85%', height:'80%', left:50, top:10}});
+    }
+
+    // DAILY CHART with new Logic
+    function drawDailyChart(page,id,data,idxD,idxCash,idxSourceClaim,idxComp) {
+      let daily={};
+      data.forEach(r=>{ 
+          let dObj=parseDate(r[idxD]); if(!dObj||isNaN(dObj.getTime()))return; 
+          let key=dObj.getFullYear()+'-'+String(dObj.getMonth()+1).padStart(2,'0')+'-'+String(dObj.getDate()).padStart(2,'0'); 
+          let cash=toFloat(r[idxCash]); let comp=toFloat(r[idxComp]); let claim=toFloat(r[idxSourceClaim]);
+          let diff = comp - claim; // Net
+          if(!daily[key])daily[key]={c:0, cp:0, diff:0}; 
+          daily[key].c+=cash; daily[key].cp+=comp; daily[key].diff+=diff;
+      });
+      let arr=[['Date','เงินสด','ขาดทุน','กำไร','ชดเชย']]; 
+      Object.keys(daily).sort().forEach(k=>{
+          let dObj=new Date(k); let lbl=dObj.getDate()+'/'+(dObj.getMonth()+1);
+          let diff = daily[k].diff;
+          let minus = diff < 0 ? Math.abs(diff) : 0;
+          let plus = diff > 0 ? diff : 0;
+          arr.push([lbl, daily[k].c, minus, plus, daily[k].cp]);
+      });
+      new google.visualization.ColumnChart(document.getElementById(id)).draw(
+          google.visualization.arrayToDataTable(arr.length>1?arr:[['','','','',''],['No Data',0,0,0,0]]),
+          {
+              isStacked:true,
+              colors:['#0dcaf0','#dc3545','#198754','#ffc107'], // Blue, Red, Green, Yellow
+              legend:'bottom',height:300,chartArea:{width:'90%',height:'80%',left:50,right:20, top:10, bottom:10}
+          }
+      );
+    }
+
+    function drawFinChart(idChart, idTable, data, idxKey, headKey) { let map={}; data.forEach(r=>{let k=String(r[idxKey]||'N/A').trim(), cost=toFloat(r[3]), c=toFloat(r[4]), claim=toFloat(r[5]), cp=toFloat(r[6]); if(!map[k])map[k]={cost:0, c:0, cl:0, cp:0}; map[k].cost+=cost; map[k].c+=c; map[k].cl+=claim; map[k].cp+=cp;}); renderFinVizNew(idChart,idTable,map,headKey); }
+    function drawFinChartIPD(idChart, idTable, data, idxKey, headKey) { let map={}; data.forEach(r=>{let k=String(r[idxKey]||'N/A').trim(), cost=toFloat(r[21]), c=toFloat(r[23]), claim=toFloat(r[28]), cp=toFloat(r[32]); if(!map[k])map[k]={cost:0, c:0, cl:0, cp:0}; map[k].cost+=cost; map[k].c+=c; map[k].cl+=claim; map[k].cp+=cp;}); renderFinVizNew(idChart,idTable,map,headKey); }
+    function renderFinVizNew(idChart, idTable, map, headKey) {
+      let cData=[[headKey,'เงินสด','ขาดทุน','กำไร','ชดเชย']], tData=[], sorted=Object.keys(map).sort((a,b)=>map[b].cost-map[a].cost);
+      sorted.forEach((k,i)=>{
+          let m=map[k];
+          let diff = m.cp - m.cl;
+          let minus = diff < 0 ? Math.abs(diff) : 0;
+          let plus = diff > 0 ? diff : 0;
+          if(i<10) cData.push([k, m.c, minus, plus, m.cp]);
+          tData.push([k, m.cost, m.c, m.cl, m.cp, diff]);
+      });
+      new google.visualization.BarChart(document.getElementById(idChart)).draw(google.visualization.arrayToDataTable(cData.length>1?cData:[['','','','',''],['No Data',0,0,0,0]]),{isStacked:true,colors:['#0dcaf0','#dc3545','#198754','#ffc107'],legend:'bottom',height:300,bar:{groupWidth:'50%'},chartArea:{width:'65%',height:'80%',left:180, top:10, bottom:10}, vAxis: {minValue:0}});
+      renderSummaryTableDataTable(idTable,[headKey,'ค่ารักษา','เงินสด','ลูกหนี้เคลม','ชดเชย','คงเหลือ'],tData,[false,1,1,1,1,1]);
+    }
+
+    function renderTable(id,data) { if($.fn.DataTable.isDataTable('#'+id))$('#'+id).DataTable().destroy(); let h=data.map(r=>{ let dStr=r[0]; let cost=toFloat(r[3]), cash=toFloat(r[4]), claim=toFloat(r[5]), comp=toFloat(r[6]); let rem = comp - claim; return `<tr><td>${dStr}</td><td>${r[1]}</td><td>${r[2]}</td><td class="text-end">${fmtNum(cost)}</td><td class="text-end">${fmtNum(cash)}</td><td class="text-end">${fmtNum(claim)}</td><td class="text-end text-warning">${fmtNum(comp)}</td><td class="text-end fw-bold ${rem<0?'text-danger':'text-success'}">${fmtNum(rem)}</td></tr>`; }).join(''); document.getElementById('tbodyOPD').innerHTML=h; $('#'+id).DataTable({pageLength:10,order:[[0,'desc']],dom:'Bfrtip',buttons:['excelHtml5']}); }
+    function renderTableIPD(id,data) { if($.fn.DataTable.isDataTable('#'+id))$('#'+id).DataTable().destroy(); let h=data.map(r=>{ let dStr=r[7],dObj=parseDate(r[7]); if(dObj&&!isNaN(dObj.getTime()))dStr=dObj.getFullYear()+'/'+String(dObj.getMonth()+1).padStart(2,'0')+'/'+String(dObj.getDate()).padStart(2,'0'); let cost=toFloat(r[21]), cash=toFloat(r[23]), claim=toFloat(r[28]), comp=toFloat(r[32]); let rem = comp - claim; return `<tr><td>${r[1]}</td><td>${dStr}</td><td>${r[11]}</td><td>${r[13]}</td><td>${r[16]}</td><td class="text-end">${fmtNum(cost)}</td><td class="text-end">${fmtNum(cash)}</td><td class="text-end text-warning">${fmtNum(comp)}</td><td class="text-end fw-bold ${rem<0?'text-danger':'text-success'}">${fmtNum(rem)}</td></tr>`; }).join(''); document.getElementById('tbodyIPD').innerHTML=h; $('#'+id).DataTable({pageLength:10,order:[[1,'desc']],dom:'Bfrtip',buttons:['excelHtml5']}); }
+    function renderSummaryTableDataTable(containerId,headers,rows,isNum) { let tableId=containerId+'_dt', h=`<table id="${tableId}" class="table table-sm table-bordered summary-table table-hover" style="width:100%"><thead class="table-light"><tr>`; headers.forEach(x=>{let c=x.includes('ค่า')||x.includes('รายได้')?'th-cost':x.includes('หนี้')?'th-remain':'';h+=`<th class="${c}">${x}</th>`}); h+=`</tr></thead><tbody>`; rows.forEach(r=>{h+=`<tr>`;r.forEach((c,i)=>{let cls=isNum[i]?'text-end':'',v=isNum[i]?(headers[i]==='จำนวน'?fmtInt(c):fmtNum(c)):c;h+=`<td class="${cls}">${v}</td>`;});h+=`</tr>`;});h+=`</tbody></table>`; document.getElementById(containerId).innerHTML=h; if($.fn.DataTable.isDataTable('#'+tableId))$('#'+tableId).DataTable().destroy(); $('#'+tableId).DataTable({pageLength:10,lengthChange:false,searching:false,info:false,paging:true,scrollX:false,scrollY:false,autoWidth:true,order:[[1,'desc']],language:{paginate:{next:'>',previous:'<'}}}); }
+    function getFilterValues(p) { let s=document.getElementById(p+'Start').value, e=document.getElementById(p+'End').value, start=s?new Date(s):null; if(start)start.setHours(0,0,0,0); let end=e?new Date(e):null; if(end)end.setHours(23,59,59,999); let rv='All'; if(document.getElementById(p+'Right'))rv=document.getElementById(p+'Right').value; return { start:start, end:end, dept:document.getElementById(p+'Dept').value, ward:document.getElementById(p+'Ward')?document.getElementById(p+'Ward').value:'All', status:document.getElementById(p+'Status')?document.getElementById(p+'Status').value:'All', right:rv }; }
+    function getTopKeyForVal(data,idxTarget,targetVal,idxSource) { let m={}, subset=data.filter(r=>r[idxTarget]===targetVal); subset.forEach(r=>{let s=String(r[idxSource]||'-').trim(),c=toFloat(r[r.length-1]);m[s]=(m[s]||0)+c;}); let sorted=Object.keys(m).sort((a,b)=>m[b]-m[a]); return sorted.length>0?sorted[0]:'-'; }
+    function toFloat(v) { return parseFloat(String(v).replace(/,/g,''))||0; }
+    function fmtNum(v) { return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function fmtInt(v) { return v.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}); }
+    function renderKPI(p, k) { if(p==='opd') $('#kpi-'+p+'-pt').text(k.pt.toLocaleString()); $('#kpi-'+p+'-inc').text(fmtNum(k.inc)); $('#kpi-'+p+'-cash').text(fmtNum(k.cash)); $('#kpi-'+p+'-debt').text(fmtNum(k.debt)); $('#kpi-'+p+'-comp').text(fmtNum(k.comp)); }
+
+    window.switchPage = function(p) { 
+      $('.nav-link').removeClass('active'); event.currentTarget.classList.add('active'); 
+      $('.page-section').removeClass('active'); $('#page-'+p).addClass('active'); 
+      if(window.innerWidth<768)$('.sidebar').removeClass('show');
+      if(p==='home') setTimeout(updateHome,100); 
+      else if(p==='opd') setTimeout(updateOPD,100); 
+      else if(p==='ipd') setTimeout(updateIPD,100); 
+      else if(p==='refer') setTimeout(updateRefer,100); 
+      else if(p==='disease') setTimeout(updateDisease,100);
+      else if(p==='income_right') setTimeout(updateIncomeRight,100);
+      setTimeout(()=>window.dispatchEvent(new Event('resize')),200);
+    }
+    window.toggleSidebar = function() { $('.sidebar').toggleClass('show'); }
+    window.resetOPD = function() { $('#opdStart,#opdEnd').val(''); $('#opdDept,#opdStatus,#opdRight').val('All'); updateOPD(); }
+    window.resetIPD = function() { $('#ipdStart,#ipdEnd').val(''); $('#ipdDept,#ipdWard,#ipdRight').val('All'); updateIPD(); }
+    window.resetRefer = function() { $('#referStart,#referEnd').val(''); $('#referDept').val('All'); updateRefer(); }
+    window.resetDisease = function() { $('#diseaseStart,#diseaseEnd').val(''); $('#diseaseOpdDept,#diseaseIpdDept,#diseaseIpdWard').val('All'); updateDisease(); }
+    window.resetIncomeRight = function() { $('#incRightStart, #incRightEnd').val(''); updateIncomeRight(); }
+</script>
