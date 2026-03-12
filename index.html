@@ -59,7 +59,579 @@
   </nav>
 
   <main class="main-content">
-    
+    <div id="page-home" class="page-section active">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold text-dark"><i class="bi bi-speedometer2"></i> ภาพรวมโรงพยาบาลไทรโยค (SaiyokHospital Overview)</h3>
+      <span class="text-muted">สรุปสถานการณ์ล่าสุดจากข้อมูลทั้งหมด</span>
+    </div>
+    <div class="text-end">
+      <small class="text-muted d-block">อัปเดตข้อมูลล่าสุด</small>
+      <span id="homeLastUpdate" class="badge bg-secondary">...</span>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <small class="text-muted fw-bold">ผู้ป่วยนอก (OPD)</small>
+          <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary"><i class="bi bi-people-fill fs-5"></i></div>
+        </div>
+        <h3 class="mb-0 text-primary fw-bold" id="home-kpi-opd-pt">0</h3>
+        <small class="text-secondary">visit</small>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <small class="text-muted fw-bold">ผู้ป่วยใน (IPD)</small>
+          <div class="bg-danger bg-opacity-10 p-2 rounded-circle text-danger"><i class="bi bi-hospital-fill fs-5"></i></div>
+        </div>
+        <h3 class="mb-0 text-danger fw-bold" id="home-kpi-ipd-pt">0</h3>
+        <small class="text-secondary">visit</small>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #198754 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="text-muted fw-bold">ค่ารักษา (Total Cost)</small>
+          <div class="bg-success bg-opacity-10 p-2 rounded-circle text-success"><i class="bi bi-currency-bitcoin fs-5"></i></div>
+        </div>
+        <h4 class="mb-2 text-success fw-bold" id="home-kpi-total-inc">0</h4>
+        <div class="small border-top pt-2">
+           <div class="d-flex justify-content-between"><span>💵 เงินสด:</span> <span id="home-inc-cash" class="fw-bold">0</span></div>
+           <div class="d-flex justify-content-between text-danger"><span>📉 หนี้:</span> <span id="home-inc-debt" class="fw-bold">0</span></div>
+           <div class="d-flex justify-content-between text-warning"><span>🛡️ ชดเชย:</span> <span id="home-inc-comp" class="fw-bold">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-3 border-0 shadow-sm h-100" style="border-left: 5px solid #6f42c1 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="text-muted fw-bold">ส่งต่อรักษา (Refer Out)</small>
+          <div class="bg-light p-2 rounded-circle" style="color:#6f42c1"><i class="bi bi-ambulance fs-5"></i></div>
+        </div>
+        <h3 class="mb-2 text-purple fw-bold" style="color:#6f42c1" id="home-kpi-refer">0</h3>
+        <div class="small border-top pt-2">
+           <div class="d-flex justify-content-between"><span>OPD:</span> <span id="home-refer-opd" class="fw-bold">0</span></div>
+           <div class="d-flex justify-content-between"><span>IPD:</span> <span id="home-refer-ipd" class="fw-bold">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white fw-bold border-0 pt-3 ps-3">📊 สัดส่วนค่ารักษา (OPD vs IPD)</div>
+        <div class="card-body"><div id="chart_home_income" class="chart-container" style="height: 300px;"></div></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white fw-bold border-0 pt-3 ps-3">🏥 เปรียบเทียบปริมาณผู้ป่วย visit </div>
+        <div class="card-body"><div id="chart_home_volume" class="chart-container" style="height: 300px;"></div></div>
+      </div>
+    </div>
+  </div>
+  
+   <div class="row g-3">
+      <div class="col-md-6">
+         <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold border-0 pt-3 ps-3 text-success">🦠 5 อันดับ โรคที่พบบ่อย (OPD)</div>
+            <div class="card-body p-0">
+               <ul class="list-group list-group-flush" id="home-top-opd-list">
+                 </ul>
+            </div>
+         </div>
+      </div>
+      <div class="col-md-6">
+         <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold border-0 pt-3 ps-3 text-danger">🦠 5 อันดับ โรคที่พบบ่อย (IPD)</div>
+            <div class="card-body p-0">
+               <ul class="list-group list-group-flush" id="home-top-ipd-list">
+                 </ul>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+    <div id="page-opd" class="page-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary fw-bold">🏥 Dashboard OPD</h3>
+        <div class="text-muted small" id="lastUpdatedOpd">...</div>
+      </div>
+
+      <div class="filter-section">
+        <div class="row g-2">
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">📅 เริ่มต้น</label>
+            <input type="date" id="opdStart" class="form-control form-control-sm" onchange="updateOPD()">
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">📅 สิ้นสุด</label>
+            <input type="date" id="opdEnd" class="form-control form-control-sm" onchange="updateOPD()">
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">🏥 แผนก</label>
+            <select id="opdDept" class="form-select form-select-sm" onchange="updateOPD()">
+              <option value="All">ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">💳 สิทธิ์</label>
+            <select id="opdRight" class="form-select form-select-sm" onchange="updateOPD()">
+              <option value="All">ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">📌 สถานะ</label>
+            <select id="opdStatus" class="form-select form-select-sm" onchange="updateOPD()">
+              <option value="All">ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-2 d-flex align-items-end">
+            <button class="btn btn-secondary btn-sm w-100" onclick="resetOPD()">
+              <i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-primary border-start border-4">
+            <small class="text-muted">ผู้รับบริการ</small>
+            <div class="kpi-value text-primary" id="kpi-opd-pt">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-success border-start border-4">
+            <small class="text-muted">ค่ารักษา (Total Cost)</small>
+            <div class="kpi-value text-success" id="kpi-opd-inc">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-info border-start border-4">
+            <small class="text-muted">เงินสด</small>
+            <div class="kpi-value text-info" id="kpi-opd-cash">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-danger border-start border-4">
+            <small class="text-muted">ลูกหนี้คงเหลือ(+=กำไร)</small>
+            <div class="kpi-value text-danger" id="kpi-opd-debt">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-warning border-start border-4">
+            <small class="text-muted">ส่วนลด/ชดเชย</small>
+            <div class="kpi-value text-warning" id="kpi-opd-comp">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3 mb-3">
+        <h6 class="text-secondary fw-bold">📊 รายได้รายวัน (ตามวันจำหน่าย)</h6>
+        <div id="chart_opd_daily" class="chart-container-lg" style="height: 300px;"></div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🏥 ผู้ป่วยแยกตามแผนก</h6>
+            <div id="chart_opd_dept_count" class="chart-container"></div>
+            <div id="table_opd_dept_count" class="mt-3"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">📌 สถานะหลังตรวจ</h6>
+            <div id="chart_opd_status" class="chart-container"></div>
+            <div id="table_opd_status" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">💵 การเงินแยกตามแผนก</h6>
+            <div id="chart_opd_dept_fin" class="chart-container"></div>
+            <div id="table_opd_dept_fin" class="mt-3"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">💰 มูลค่าตามสิทธิ์</h6>
+            <div id="chart_opd_rights" class="chart-container"></div>
+            <div id="table_opd_rights" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3">
+        <h6>📋 ข้อมูลรายละเอียด OPD</h6>
+        <div class="table-responsive">
+          <table id="tableOPD" class="table table-striped table-hover table-sm w-100">
+            <thead class="table-light">
+              <tr>
+                <th>วันที่</th><th>แผนก</th><th>สิทธิ์</th>
+                <th class="text-end">ค่ารักษา</th><th class="text-end">เงินสด</th>
+                <th class="text-end">ลูกหนี้ตั้งต้น</th><th class="text-end">ชดเชย</th>
+                <th class="text-end">หนี้คงเหลือ</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyOPD"></tbody>
+          </table>
+        </div>
+      </div>
+</div>
+    <div id="page-ipd" class="page-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-danger fw-bold">🛌 Dashboard IPD (ผู้ป่วยใน)</h3>
+        <div class="text-muted small" id="lastUpdatedIpd">...</div>
+      </div>
+
+      <div class="filter-section">
+        <div class="row g-2">
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">📅 วันจำหน่าย (เริ่ม)</label>
+            <input type="date" id="ipdStart" class="form-control form-control-sm" onchange="updateIPD()">
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">📅 วันจำหน่าย (สิ้นสุด)</label>
+            <input type="date" id="ipdEnd" class="form-control form-control-sm" onchange="updateIPD()">
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">🛌 Ward</label>
+            <select id="ipdWard" class="form-select form-select-sm" onchange="updateIPD()">
+              <option value="All">ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="small fw-bold">🏥 แผนก</label>
+            <select id="ipdDept" class="form-select form-select-sm" onchange="updateIPD()">
+              <option value="All">ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+             <label class="small fw-bold">💳 สิทธิ์</label>
+             <select id="ipdRight" class="form-select form-select-sm" onchange="updateIPD()">
+               <option value="All">ทั้งหมด</option>
+             </select>
+          </div>
+          <div class="col-12 col-md-2 d-flex align-items-end">
+            <button class="btn btn-secondary btn-sm w-100" onclick="resetIPD()">
+              <i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-primary border-start border-4">
+            <small class="text-muted">คน / ครั้ง (HN/AN)</small>
+            <div class="kpi-value text-primary" id="kpi-ipd-pt">0 / 0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-success border-start border-4">
+            <small class="text-muted">ค่ารักษา (Total Cost)</small>
+            <div class="kpi-value text-success" id="kpi-ipd-inc">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-info border-start border-4">
+            <small class="text-muted">เงินสด</small>
+            <div class="kpi-value text-info" id="kpi-ipd-cash">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-danger border-start border-4">
+            <small class="text-muted">ลูกหนี้คงเหลือ(+=กำไร)</small>
+            <div class="kpi-value text-danger" id="kpi-ipd-debt">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card p-3 text-center h-100 border-warning border-start border-4">
+            <small class="text-muted">ส่วนลด/ชดเชย</small>
+            <div class="kpi-value text-warning" id="kpi-ipd-comp">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3 mb-3">
+        <h6 class="text-secondary fw-bold">📊 รายได้รายวัน (ตามวันจำหน่าย)</h6>
+        <div id="chart_ipd_daily" class="chart-container-lg" style="height: 300px;"></div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🛌 ผู้ป่วยแยกตาม Ward</h6>
+            <div id="chart_ipd_ward_count" class="chart-container"></div>
+            <div id="table_ipd_ward_count" class="mt-3"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">📌 สถานะการจำหน่าย</h6>
+            <div id="chart_ipd_status" class="chart-container"></div>
+            <div id="table_ipd_status" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">💵 การเงินแยกตามแผนก</h6>
+            <div id="chart_ipd_dept_fin" class="chart-container"></div>
+            <div id="table_ipd_dept_fin" class="mt-3"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">💰 มูลค่าตามสิทธิ์</h6>
+            <div id="chart_ipd_rights" class="chart-container"></div>
+            <div id="table_ipd_rights" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3">
+        <h6>📋 ข้อมูลรายละเอียด IPD (DATAIP)</h6>
+        <div class="table-responsive">
+          <table id="tableIPD" class="table table-striped table-hover table-sm w-100">
+            <thead class="table-light">
+              <tr>
+                <th>AN</th><th>วันที่จำหน่าย</th><th>Ward</th><th>แผนก</th><th>สิทธิ์</th>
+                <th class="text-end">ค่ารักษา</th><th class="text-end">เงินสด</th>
+                <th class="text-end">ชดเชย</th><th class="text-end">คงเหลือ</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIPD"></tbody>
+          </table>
+        </div>
+      </div>
+</div>
+    <div id="page-refer" class="page-section">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-purple fw-bold">🚑 Refer Dashboard</h3>
+    <div class="text-muted small" id="lastUpdatedRefer">...</div>
+  </div>
+
+  <ul class="nav nav-pills mb-3" id="referTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-refer-opd" data-bs-toggle="pill" data-bs-target="#content-refer-opd" type="button" onclick="setTimeout(updateRefer,200)">OPD Refer</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-refer-ipd" data-bs-toggle="pill" data-bs-target="#content-refer-ipd" type="button" onclick="setTimeout(updateRefer,200)">IPD Refer</button>
+    </li>
+  </ul>
+
+  <div class="filter-section mb-4">
+    <div class="row g-2">
+      <div class="col-6 col-md-2">
+        <label class="small fw-bold">📅 เริ่มต้น</label>
+        <input type="date" id="referStart" class="form-control form-control-sm" onchange="updateRefer()">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="small fw-bold">📅 สิ้นสุด</label>
+        <input type="date" id="referEnd" class="form-control form-control-sm" onchange="updateRefer()">
+      </div>
+      
+      <div class="col-6 col-md-3 filter-refer-opd">
+        <label class="small fw-bold">🏥 จุดส่ง (OPD)</label>
+        <select id="referDept" class="form-select form-select-sm" onchange="updateRefer()">
+          <option value="All">ทั้งหมด</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-3 filter-refer-ipd d-none">
+        <label class="small fw-bold">🛌 Ward</label>
+        <select id="referWard" class="form-select form-select-sm" onchange="updateRefer()">
+          <option value="All">ทั้งหมด</option>
+        </select>
+      </div>
+       <div class="col-6 col-md-2 filter-refer-ipd d-none">
+        <label class="small fw-bold">🏥 แผนก</label>
+        <select id="referIpdDept" class="form-select form-select-sm" onchange="updateRefer()">
+          <option value="All">ทั้งหมด</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex align-items-end ms-auto">
+        <button class="btn btn-secondary btn-sm w-100" onclick="resetRefer()">
+          <i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="content-refer-opd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-4 text-center border-primary border-start border-4">
+            <h5 class="text-muted">จำนวน Refer (OPD) ทั้งหมด</h5>
+            <div class="display-4 fw-bold text-primary" id="kpi-refer-opd-count">0</div>
+            <small class="text-muted">เคส</small>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 h-100">
+             <div class="d-flex justify-content-between align-items-center mb-2">
+               <h6 class="text-secondary fw-bold">🕒 แยกตามช่วงเวลา (เวรเช้า/บ่าย/ดึก)</h6>
+               <div class="text-muted small fw-bold bg-light px-2 py-1 rounded" id="refer-opd-shift-avg">รอคำนวณ...</div>
+             </div>
+             <div id="chart_refer_opd_shift" class="chart-container" style="height: 300px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📈 รายวัน</h6><div id="chart_refer_opd_daily" class="chart-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📅 รายเดือน</h6><div id="chart_refer_opd_monthly" class="chart-container"></div></div></div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🏥 แยกตามจุดส่ง</h6><div id="chart_refer_opd_dept" class="chart-container"></div><div id="table_refer_opd_dept" class="summary-table-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🦠 PDX ที่ส่งต่อ</h6><div id="chart_refer_opd_pdx" class="chart-container"></div><div id="table_refer_opd_pdx" class="summary-table-container"></div></div></div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด Refer OPD</h6>
+        <div class="table-responsive"><table id="tableReferOPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>วันที่</th><th>เวลา</th><th>ประเภท</th><th>จุดส่ง</th><th>PDX</th></tr></thead><tbody id="tbodyReferOPD"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="content-refer-ipd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-4 text-center border-danger border-start border-4">
+            <h5 class="text-muted">จำนวน Refer (IPD) ทั้งหมด</h5>
+            <div class="display-4 fw-bold text-danger" id="kpi-refer-ipd-count">0</div>
+            <small class="text-muted">เฉพาะเคส By Transfer</small>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 h-100">
+             <div class="d-flex justify-content-between align-items-center mb-2">
+               <h6 class="text-secondary fw-bold">🕒 แยกตามช่วงเวลา (เวรเช้า/บ่าย/ดึก)</h6>
+               <div class="text-muted small fw-bold bg-light px-2 py-1 rounded" id="refer-ipd-shift-avg">รอคำนวณ...</div>
+             </div>
+             <div id="chart_refer_ipd_shift" class="chart-container" style="height: 300px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📈 รายวัน</h6><div id="chart_refer_ipd_daily" class="chart-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">📅 รายเดือน</h6><div id="chart_refer_ipd_monthly" class="chart-container"></div></div></div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🛌 แยกตาม Ward</h6><div id="chart_refer_ipd_ward" class="chart-container"></div><div id="table_refer_ipd_ward" class="summary-table-container"></div></div></div>
+        <div class="col-md-6"><div class="card p-3 h-100"><h6 class="text-secondary fw-bold">🦠 PDX ที่ส่งต่อ</h6><div id="chart_refer_ipd_pdx" class="chart-container"></div><div id="table_refer_ipd_pdx" class="summary-table-container"></div></div></div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด Refer IPD</h6>
+        <div class="table-responsive"><table id="tableReferIPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>วันที่</th><th>เวลา</th><th>ประเภท</th><th>Ward</th><th>PDX</th></tr></thead><tbody id="tbodyReferIPD"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div id="page-disease" class="page-section">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-success fw-bold">🦠 Disease Ranking (อันดับโรค)</h3>
+    <div class="text-muted small" id="lastUpdatedDisease">...</div>
+  </div>
+
+  <ul class="nav nav-pills mb-3" id="diseaseTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-disease-opd" data-bs-toggle="pill" data-bs-target="#content-disease-opd" type="button" onclick="setTimeout(updateDisease,200)">OPD Ranking</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-disease-ipd" data-bs-toggle="pill" data-bs-target="#content-disease-ipd" type="button" onclick="setTimeout(updateDisease,200)">IPD Ranking</button>
+    </li>
+  </ul>
+
+  <div class="filter-section mb-4">
+    <div class="row g-2">
+      <div class="col-6 col-md-2"><label class="small fw-bold">📅 เริ่มต้น</label><input type="date" id="diseaseStart" class="form-control form-control-sm" onchange="updateDisease()"></div>
+      <div class="col-6 col-md-2"><label class="small fw-bold">📅 สิ้นสุด</label><input type="date" id="diseaseEnd" class="form-control form-control-sm" onchange="updateDisease()"></div>
+      <div class="col-6 col-md-3 filter-opd-only"><label class="small fw-bold">🏥 แผนก (OPD)</label><select id="diseaseOpdDept" class="form-select form-select-sm" onchange="updateDisease()"><option value="All">ทั้งหมด</option></select></div>
+      <div class="col-6 col-md-2 filter-ipd-only d-none"><label class="small fw-bold">🏥 แผนก (IPD)</label><select id="diseaseIpdDept" class="form-select form-select-sm" onchange="updateDisease()"><option value="All">ทั้งหมด</option></select></div>
+      <div class="col-6 col-md-2 filter-ipd-only d-none"><label class="small fw-bold">🛌 Ward</label><select id="diseaseIpdWard" class="form-select form-select-sm" onchange="updateDisease()"><option value="All">ทั้งหมด</option></select></div>
+      <div class="col-12 col-md-2 d-flex align-items-end ms-auto"><button class="btn btn-secondary btn-sm w-100" onclick="resetDisease()"><i class="bi bi-arrow-counterclockwise"></i> รีเซ็ต</button></div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="content-disease-opd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 text-center border-success border-start border-4">
+            <h5 class="text-muted">จำนวนผู้ป่วยรวม (OPD)</h5>
+            <div class="display-5 fw-bold text-success" id="kpi-disease-opd-count">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🏆 อันดับโรคที่พบบ่อย (ทั้งหมด)</h6>
+            <div id="chart_disease_opd_top" class="chart-container-lg" style="min-height: 400px;"></div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🏥 สัดส่วนแยกตามแผนก</h6>
+            <div id="chart_disease_opd_dept" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด (เรียงตามจำนวน)</h6>
+        <div class="table-responsive"><table id="tableDiseaseOPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>อันดับ</th><th>รหัสโรค (PDX)</th><th>แผนกที่พบบ่อยสุด</th><th>จำนวนรวม (ราย)</th></tr></thead><tbody id="tbodyDiseaseOPD"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="content-disease-ipd">
+      <div class="row g-3 mb-3">
+        <div class="col-md-12">
+          <div class="card p-3 text-center border-danger border-start border-4">
+            <h5 class="text-muted">จำนวนผู้ป่วยรวม (IPD)</h5>
+            <div class="display-5 fw-bold text-danger" id="kpi-disease-ipd-count">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <div class="card p-3 h-100">
+             <h6 class="text-secondary fw-bold">🏆 อันดับโรคที่พบบ่อย (ทั้งหมด)</h6>
+            <div id="chart_disease_ipd_top" class="chart-container-lg" style="min-height: 400px;"></div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card p-3 h-100">
+            <h6 class="text-secondary fw-bold">🛌 สัดส่วนแยกตาม Ward</h6>
+            <div id="chart_disease_ipd_ward" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-3">
+        <h6>📋 รายละเอียด (เรียงตามจำนวน)</h6>
+        <div class="table-responsive"><table id="tableDiseaseIPD" class="table table-sm table-striped table-hover w-100"><thead class="table-light"><tr><th>อันดับ</th><th>รหัสโรค (PDX)</th><th>แผนก</th><th>Ward</th><th>จำนวนรวม (ราย)</th></tr></thead><tbody id="tbodyDiseaseIPD"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
     </main>
 
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -739,4 +1311,5 @@ function init() {
 
 </body>
 </html>
+
 
