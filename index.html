@@ -78,7 +78,25 @@
     let DB = {};
     let opdF = [], ipdF = [];
 
-    function init() { google.script.run.withSuccessHandler(d => { DB=d; onLoaded(); }).getData(); }
+    // นำลิงก์ที่ได้จากขั้นตอนที่ 1 มาใส่ในเครื่องหมายคำพูดด้านล่างนี้
+const API_URL = "https://script.google.com/macros/s/AKfycbxl730LSqYK88BZok5bOEjW5Zf5EWLs74slNHMdmyZjJfOBBrScjEkkB56k3McJc7tzvQ/exec"; 
+
+function init() { 
+  // แสดงสถานะระหว่างรอข้อมูลโหลด
+  $('#homeLastUpdate').text("กำลังโหลดข้อมูลจากฐานข้อมูล..."); 
+  
+  // ใช้คำสั่ง fetch แทน google.script.run เพื่อดึงข้อมูลข้ามเซิร์ฟเวอร์
+  fetch(API_URL)
+    .then(response => response.json())
+    .then(d => { 
+        DB = d; // เก็บข้อมูลลงตัวแปรเดิมของคุณ
+        onLoaded(); // เรียกฟังก์ชันแสดงผลของคุณ
+    })
+    .catch(error => {
+        console.error("Error Fetching Data:", error);
+        $('#homeLastUpdate').text("❌ เกิดข้อผิดพลาดในการโหลดข้อมูล");
+    });
+}
 
     function onLoaded() {
       try {
@@ -721,3 +739,4 @@
 
 </body>
 </html>
+
