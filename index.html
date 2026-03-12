@@ -1188,7 +1188,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIK
       }
     }
 
-    // ==========================================
+   // ==========================================
     // MODULE: DISEASE
     // ==========================================
     function setupDiseaseDropdowns() {
@@ -1198,8 +1198,13 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIK
     }
 
     function toggleDiseaseFilters(tabId) {
-        if(tabId === 'tab-disease-opd') { $('.filter-opd-only').removeClass('d-none'); $('.filter-ipd-only').addClass('d-none'); } 
-        else { $('.filter-opd-only').addClass('d-none'); $('.filter-ipd-only').removeClass('d-none'); }
+        if(tabId === 'tab-disease-opd') { 
+            $('.filter-opd-only').removeClass('d-none'); 
+            $('.filter-ipd-only').addClass('d-none'); 
+        } else { 
+            $('.filter-opd-only').addClass('d-none'); 
+            $('.filter-ipd-only').removeClass('d-none'); 
+        }
     }
 
     window.updateDisease = function() {
@@ -1244,7 +1249,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIK
        });
        $('#kpi-disease-opd-count').text(fmtInt(total));
        drawSimpleBarChart('chart_disease_opd_top', pdxMap, 'PDX', 20, '#198754');
-       drawSimplePieChart('chart_disease_opd_dept', deptMap);
+       drawSimplePieChart('chart_disease_opd_dept', deptMap); // <-- ต้องมีฟังก์ชันนี้รองรับ
        
        let sortedPdx = Object.keys(pdxMap).sort((a,b)=>pdxMap[b]-pdxMap[a]);
        let tableData = sortedPdx.map((k,i) => [i+1, k, getTopKeyForVal(data, 2, k, 1), fmtInt(pdxMap[k])]);
@@ -1263,11 +1268,66 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIK
        });
        $('#kpi-disease-ipd-count').text(fmtInt(total));
        drawSimpleBarChart('chart_disease_ipd_top', pdxMap, 'PDX', 20, '#dc3545');
-       drawSimplePieChart('chart_disease_ipd_ward', wardMap);
+       drawSimplePieChart('chart_disease_ipd_ward', wardMap); // <-- ต้องมีฟังก์ชันนี้รองรับ
        
        let sortedPdx = Object.keys(pdxMap).sort((a,b)=>pdxMap[b]-pdxMap[a]);
        let tableData = sortedPdx.map((k,i) => [i+1, k, getTopKeyForVal(data, 3, k, 1), getTopKeyForVal(data, 3, k, 2), fmtInt(pdxMap[k])]);
        renderDataTableDisease('tableDiseaseIPD', 'tbodyDiseaseIPD', tableData, true);
+    } 
+
+    function renderDataTableDisease(tableId, tbodyId, tableData, isIpd) {
+        // ล้างตารางเก่าทิ้งก่อน (ถ้ามี)
+        if ($.fn.DataTable.isDataTable('#' + tableId)) $('#' + tableId).DataTable().destroy();
+        
+        let html = tableData.map(r => {
+            if (isIpd) {
+                // IPD มี 5 คอลัมน์: [อันดับ, PDX, แผนก, Ward, จำนวน]
+                return `<tr>
+                            <td class="text-center">${r[0]}</td>
+                            <td class="fw-bold text-danger">${r[1]}</td>
+                            <td>${r[2]}</td>
+                            <td>${r[3]}</td>
+                            <td class="text-end fw-bold">${r[4]}</td>
+                        </tr>`;
+            } else {
+                // OPD มี 4 คอลัมน์: [อันดับ, PDX, แผนก, จำนวน]
+                return `<tr>
+                            <td class="text-center">${r[0]}</td>
+                            <td class="fw-bold text-success">${r[1]}</td>
+                            <td>${r[2]}</td>
+                            <td class="text-end fw-bold">${r[3]}</td>
+                        </tr>`;
+            }
+        }).join('');
+        
+        document.getElementById(tbodyId).innerHTML = html;
+        
+        // เรียกใช้ DataTables
+        $('#' + tableId).DataTable({
+            pageLength: 10,
+            order: [[0, 'asc']], // เรียงตามอันดับ 1, 2, 3...
+            dom: 'Bfrtip',
+            buttons: ['excelHtml5']
+        });
+    }
+
+    // ==========================================
+    // ฟังก์ชันที่ขาดหายไป: วาดกราฟวงกลม (Pie Chart)
+    // ==========================================
+    function drawSimplePieChart(id, map) {
+        let arr = [['Category', 'Value']];
+        let sorted = Object.keys(map).sort((a, b) => map[b] - map[a]); // เรียงจากมากไปน้อย
+        
+        // เอาเฉพาะ 10 อันดับแรกมาโชว์ (ถ้าเยอะไปกราฟจะดูยาก)
+        sorted.slice(0, 10).forEach(k => arr.push([k, map[k]]));
+        
+        let data = google.visualization.arrayToDataTable(arr.length > 1 ? arr : [['Category', 'Value'], ['No Data', 0]]);
+        let options = {
+            legend: { position: 'right' },
+            chartArea: { width: '90%', height: '80%' },
+            pieHole: 0.4 // ปรับเป็น 0 หากต้องการกราฟวงกลมทึบ
+        };
+        new google.visualization.PieChart(document.getElementById(id)).draw(data, options);
     }
 
     // ==========================================
@@ -1453,49 +1513,11 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx4veJHBOnv6pcYggsWLzIK
             buttons: ['excelHtml5']
         });
     }
-
-    // ==========================================
-    // ฟังก์ชันที่ขาดหายไป: สร้างตารางหน้า อันดับโรค (Disease)
-    // ==========================================
-    function renderDataTableDisease(tableId, tbodyId, tableData, isIpd) {
-        // ล้างตารางเก่าทิ้งก่อน (ถ้ามี)
-        if ($.fn.DataTable.isDataTable('#' + tableId)) $('#' + tableId).DataTable().destroy();
-        
-        let html = tableData.map(r => {
-            if (isIpd) {
-                // IPD มี 5 คอลัมน์: [อันดับ, PDX, แผนก, Ward, จำนวน]
-                return `<tr>
-                            <td class="text-center">${r[0]}</td>
-                            <td class="fw-bold text-danger">${r[1]}</td>
-                            <td>${r[2]}</td>
-                            <td>${r[3]}</td>
-                            <td class="text-end fw-bold">${r[4]}</td>
-                        </tr>`;
-            } else {
-                // OPD มี 4 คอลัมน์: [อันดับ, PDX, แผนก, จำนวน]
-                return `<tr>
-                            <td class="text-center">${r[0]}</td>
-                            <td class="fw-bold text-success">${r[1]}</td>
-                            <td>${r[2]}</td>
-                            <td class="text-end fw-bold">${r[3]}</td>
-                        </tr>`;
-            }
-        }).join('');
-        
-        document.getElementById(tbodyId).innerHTML = html;
-        
-        // เรียกใช้ DataTables
-        $('#' + tableId).DataTable({
-            pageLength: 10,
-            order: [[0, 'asc']], // เรียงตามอันดับ 1, 2, 3...
-            dom: 'Bfrtip',
-            buttons: ['excelHtml5']
-        });
-    }
 </script>
 
 </body>
 </html>
+
 
 
 
